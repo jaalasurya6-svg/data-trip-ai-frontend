@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, ExternalLink, Heart, Shield, Sparkles, Terminal } from 'lucide-react';
+import { Compass, Heart, Shield, Sparkles, Terminal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -46,16 +46,6 @@ export default function Footer() {
               <Link to="/favorites" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#38bdf8'} onMouseLeave={(e) => e.target.style.color = '#94a3b8'}>
                 Saved Favorites
               </Link>
-            </li>
-            <li>
-              <a
-                href="http://localhost:8080/swagger-ui/index.html"
-                target="_blank"
-                rel="noreferrer"
-                style={{ color: '#38bdf8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-              >
-                Swagger API Docs <ExternalLink size={13} />
-              </a>
             </li>
           </ul>
         </div>

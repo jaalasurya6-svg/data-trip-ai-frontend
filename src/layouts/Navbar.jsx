@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Compass, Navigation, ExternalLink, Lock, LogOut } from 'lucide-react';
+import { Compass, Navigation, Lock, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar({ onOpenRouteModal }) {
@@ -53,16 +53,6 @@ export default function Navbar({ onOpenRouteModal }) {
         >
           <Navigation size={14} color="var(--primary)" /> Route &amp; Transit
         </button>
-
-        <a
-          href="http://localhost:8080/swagger-ui/index.html"
-          target="_blank"
-          rel="noreferrer"
-          className="btn btn-outline"
-          style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem' }}
-        >
-          Swagger UI <ExternalLink size={14} />
-        </a>
 
         {/* User Authentication Pill */}
         {currentUser ? (
