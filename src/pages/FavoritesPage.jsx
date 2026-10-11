@@ -35,7 +35,7 @@ export default function FavoritesPage() {
   const handleToggleFavorite = async (destinationId) => {
     try {
       await toggleFavorite(destinationId);
-      setFavorites((prev) => prev.filter((f) => f.destination.id !== destinationId));
+      setFavorites((prev) => prev.filter((f) => (f.destination?.id || f.destinationId) !== destinationId));
     } catch (err) {
       alert('Error updating bookmark: ' + err.message);
     }
@@ -97,25 +97,43 @@ export default function FavoritesPage() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-          {favorites.map((fav) => (
-            <DestinationCard
-              key={fav.id}
-              destination={fav.destination}
-              isFavorite={true}
-              onToggleFavorite={() => handleToggleFavorite(fav.destination.id)}
-              onWeatherClick={() => openWeatherModal(fav.destination)}
-              onRouteClick={() => openRouteModal({
-                fromName: 'Current Location',
-                fromLat: 18.9696,
-                fromLon: 72.8193,
-                toName: fav.destination.name,
-                toLat: fav.destination.latitude,
-                toLon: fav.destination.longitude,
-                mode: 'DRIVING'
-              })}
-              onReviewsClick={() => openReviewsModal(fav.destination)}
-            />
-          ))}
+          {favorites.map((fav) => {
+            const dest = fav.destination || {
+              id: fav.destinationId,
+              name: fav.destinationName,
+              city: fav.city || 'City',
+              state: fav.state || 'State',
+              category: fav.category || 'HERITAGE',
+              estimatedCost: fav.estimatedCost ?? 0,
+              rating: fav.rating ?? 4.5,
+              imageUrl: fav.imageUrl || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+              description: fav.description || `${fav.destinationName} in ${fav.city || 'India'}`,
+              averageVisitDurationHours: fav.averageVisitDurationHours || 2.0,
+              latitude: fav.latitude || 18.922,
+              longitude: fav.longitude || 72.834,
+              reviewCount: fav.reviewCount || 0,
+            };
+
+            return (
+              <DestinationCard
+                key={fav.id || dest.id}
+                destination={dest}
+                isFavorite={true}
+                onToggleFavorite={() => handleToggleFavorite(dest.id)}
+                onWeatherClick={() => openWeatherModal(dest)}
+                onRouteClick={() => openRouteModal({
+                  fromName: 'Current Location',
+                  fromLat: 18.9696,
+                  fromLon: 72.8193,
+                  toName: dest.name,
+                  toLat: dest.latitude,
+                  toLon: dest.longitude,
+                  mode: 'DRIVING'
+                })}
+                onReviewsClick={() => openReviewsModal(dest)}
+              />
+            );
+          })}
         </div>
       )}
     </div>

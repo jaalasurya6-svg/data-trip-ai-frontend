@@ -28,7 +28,7 @@ export default function HomePage() {
         if (isAuthenticated) {
           try {
             const favRes = await getUserFavorites();
-            const ids = new Set((favRes.data || []).map((f) => f.destination.id));
+            const ids = new Set((favRes.data || []).map((f) => f.destination?.id || f.destinationId).filter(Boolean));
             setFavoriteIds(ids);
           } catch (ignored) {}
         }
