@@ -16,6 +16,82 @@ import ItineraryTimelineModal from '../components/ItineraryTimelineModal';
 import ExpenseManagerModal from '../components/ExpenseManagerModal';
 import AiStudioModal from '../components/AiStudioModal';
 
+// Famous Indian tourist hubs
+const FAMOUS_INDIAN_CITIES = [
+  'Delhi',
+  'Mumbai',
+  'Bengaluru',
+  'Hyderabad',
+  'Jaipur',
+  'Agra',
+  'Goa',
+  'Chennai',
+  'Kolkata',
+  'Varanasi',
+  'Kochi',
+  'Amritsar',
+  'Udaipur',
+  'Mysore',
+  'Pune',
+  'Pondicherry'
+];
+
+const CITY_ALIASES = {
+  'bangalore': 'bengaluru',
+  'bengaluru': 'bengaluru',
+  'bombay': 'mumbai',
+  'mumbai': 'mumbai',
+  'delhi': 'delhi',
+  'new delhi': 'delhi',
+  'newdelhi': 'delhi',
+  'kolkata': 'kolkata',
+  'calcutta': 'kolkata',
+  'chennai': 'chennai',
+  'madras': 'chennai',
+  'cochin': 'kochi',
+  'kochi': 'kochi',
+  'banaras': 'varanasi',
+  'kashi': 'varanasi',
+  'varanasi': 'varanasi',
+  'mysuru': 'mysore',
+  'mysore': 'mysore',
+  'puducherry': 'pondicherry',
+  'pondy': 'pondicherry',
+  'pondicherry': 'pondicherry',
+  'hyderabad': 'hyderabad',
+  'jaipur': 'jaipur',
+  'agra': 'agra',
+  'goa': 'goa',
+  'amritsar': 'amritsar',
+  'udaipur': 'udaipur',
+  'pune': 'pune',
+};
+
+const CITY_COORDINATES = {
+  'delhi': { lat: 28.6139, lng: 77.2090, name: 'Connaught Place, New Delhi' },
+  'mumbai': { lat: 18.9696, lng: 72.8193, name: 'Mumbai Central Terminus' },
+  'bengaluru': { lat: 12.9716, lng: 77.5946, name: 'Majestic Bus Stand, Bengaluru' },
+  'hyderabad': { lat: 17.3850, lng: 78.4867, name: 'Nampally Station, Hyderabad' },
+  'jaipur': { lat: 26.9124, lng: 75.7873, name: 'Jaipur Junction Railway Station' },
+  'agra': { lat: 27.1767, lng: 78.0081, name: 'Agra Cantonment Railway Station' },
+  'goa': { lat: 15.4909, lng: 73.8278, name: 'Panaji Bus Terminus, Goa' },
+  'chennai': { lat: 13.0827, lng: 80.2707, name: 'Chennai Central Railway Station' },
+  'kolkata': { lat: 22.5726, lng: 88.3639, name: 'Howrah Railway Station, Kolkata' },
+  'varanasi': { lat: 25.3176, lng: 82.9739, name: 'Varanasi Junction Cantt' },
+  'kochi': { lat: 9.9312, lng: 76.2673, name: 'Ernakulam Junction, Kochi' },
+  'amritsar': { lat: 31.6340, lng: 74.8723, name: 'Amritsar Junction Railway Station' },
+  'udaipur': { lat: 24.5854, lng: 73.7125, name: 'Udaipur City Railway Station' },
+  'mysore': { lat: 12.2958, lng: 76.6394, name: 'Mysuru City Bus Stand' },
+  'pune': { lat: 18.5204, lng: 73.8567, name: 'Pune Railway Station' },
+  'pondicherry': { lat: 11.9416, lng: 79.8083, name: 'Pondicherry Main Bus Stand' },
+};
+
+const normalizeCity = (city) => {
+  if (!city) return '';
+  const cleaned = city.trim().toLowerCase();
+  return CITY_ALIASES[cleaned] || cleaned;
+};
+
 export default function TripsPage() {
   const { isAuthenticated, openAuthModal } = useAuth();
 
@@ -59,7 +135,7 @@ export default function TripsPage() {
     try {
       const [tripsRes, destRes] = await Promise.all([
         getUserTrips({ page: 0, size: 50 }),
-        getDestinations({ page: 0, size: 50 }),
+        getDestinations({ page: 0, size: 200 }),
       ]);
       setTrips(tripsRes.data?.content || []);
       setAvailableDestinations(destRes.data?.content || []);
@@ -73,6 +149,22 @@ export default function TripsPage() {
   useEffect(() => {
     fetchTripsData();
   }, [isAuthenticated]);
+
+  const handleCityChange = (newCity) => {
+    const norm = normalizeCity(newCity);
+    const coords = CITY_COORDINATES[norm];
+    setCreateForm((prev) => ({
+      ...prev,
+      destinationCity: newCity,
+      title: prev.title === 'South Mumbai Heritage Walk' || prev.title.includes('Day Trip') || !prev.title
+        ? `${newCity} Highlights Day Trip`
+        : prev.title,
+      startLocationName: coords ? coords.name : (prev.startLocationName || `${newCity} Central`),
+      startingLocation: coords ? coords.name : (prev.startingLocation || `${newCity} Central`),
+      startLatitude: coords ? coords.lat : prev.startLatitude,
+      startLongitude: coords ? coords.lng : prev.startLongitude,
+    }));
+  };
 
   const handleStatusChange = async (tripId, newStatus) => {
     try {
@@ -102,6 +194,22 @@ export default function TripsPage() {
         return { ...prev, destinationIds: [...current, destId] };
       }
     });
+  };
+
+  const handleSelectAllCandidateSpots = (spots) => {
+    const ids = spots.map((s) => s.id);
+    setCreateForm((prev) => ({
+      ...prev,
+      destinationIds: Array.from(new Set([...prev.destinationIds, ...ids])),
+    }));
+  };
+
+  const handleDeselectAllCandidateSpots = (spots) => {
+    const idsToRemove = new Set(spots.map((s) => s.id));
+    setCreateForm((prev) => ({
+      ...prev,
+      destinationIds: prev.destinationIds.filter((id) => !idsToRemove.has(id)),
+    }));
   };
 
   const handleCreateSubmit = async (e) => {
@@ -393,10 +501,17 @@ export default function TripsPage() {
                   <input
                     type="text"
                     required
+                    list="city-suggestions"
+                    placeholder="e.g. Mumbai, Delhi, Goa..."
                     value={createForm.destinationCity}
-                    onChange={(e) => setCreateForm({ ...createForm, destinationCity: e.target.value })}
+                    onChange={(e) => handleCityChange(e.target.value)}
                     style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
                   />
+                  <datalist id="city-suggestions">
+                    {FAMOUS_INDIAN_CITIES.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
 
@@ -493,25 +608,95 @@ export default function TripsPage() {
               </div>
 
               {/* Destination Selection Checklist */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                  Select Candidate Spots to Include in Itinerary ({createForm.destinationIds.length} selected):
-                </label>
-                <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', background: '#fff' }}>
-                  {availableDestinations
-                    .filter((d) => !createForm.destinationCity || d.city.toLowerCase() === createForm.destinationCity.toLowerCase())
-                    .map((dest) => (
-                      <label key={dest.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', cursor: 'pointer', padding: '0.2rem 0' }}>
-                        <input
-                          type="checkbox"
-                          checked={createForm.destinationIds.includes(dest.id)}
-                          onChange={() => handleDestinationCheck(dest.id)}
-                        />
-                        <span><strong>{dest.name}</strong> ({dest.category} • ₹{dest.estimatedCost} • {dest.averageVisitDurationHours}h)</span>
+              {(() => {
+                const normCity = normalizeCity(createForm.destinationCity);
+                const matchingSpots = availableDestinations.filter((d) => {
+                  if (!normCity) return true;
+                  const destNorm = normalizeCity(d.city);
+                  return (
+                    destNorm === normCity ||
+                    destNorm.includes(normCity) ||
+                    normCity.includes(destNorm)
+                  );
+                });
+                const hasMatches = matchingSpots.length > 0;
+                const spotsToDisplay = hasMatches ? matchingSpots : availableDestinations;
+
+                return (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                        Select Candidate Spots to Include in Itinerary ({createForm.destinationIds.length} selected):
                       </label>
-                    ))}
-                </div>
-              </div>
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectAllCandidateSpots(spotsToDisplay)}
+                          style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          Select All ({spotsToDisplay.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeselectAllCandidateSpots(spotsToDisplay)}
+                          style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer', color: '#64748b' }}
+                        >
+                          Deselect All
+                        </button>
+                      </div>
+                    </div>
+
+                    {!hasMatches && createForm.destinationCity && (
+                      <div style={{ fontSize: '0.75rem', color: '#b45309', background: '#fef3c7', padding: '0.35rem 0.6rem', borderRadius: '4px', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <AlertCircle size={14} />
+                        <span>No exact spots found for "{createForm.destinationCity}". Showing top attractions across India:</span>
+                      </div>
+                    )}
+
+                    {hasMatches && createForm.destinationCity && (
+                      <div style={{ fontSize: '0.73rem', color: '#047857', background: '#d1fae5', padding: '0.25rem 0.5rem', borderRadius: '4px', marginBottom: '0.4rem' }}>
+                        ✓ Showing {matchingSpots.length} attractions in {createForm.destinationCity}
+                      </div>
+                    )}
+
+                    <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', background: '#fff' }}>
+                      {spotsToDisplay.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '1rem', color: '#64748b', fontSize: '0.8rem' }}>
+                          No spots loaded yet.
+                        </div>
+                      ) : (
+                        spotsToDisplay.map((dest) => (
+                          <label
+                            key={dest.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              padding: '0.25rem 0.4rem',
+                              borderRadius: '4px',
+                              background: createForm.destinationIds.includes(dest.id) ? '#f0fdf4' : 'transparent',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={createForm.destinationIds.includes(dest.id)}
+                              onChange={() => handleDestinationCheck(dest.id)}
+                            />
+                            <span style={{ flex: 1 }}>
+                              <strong>{dest.name}</strong>{' '}
+                              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                ({dest.city} • {dest.category} • ₹{dest.estimatedCost} • {dest.averageVisitDurationHours}h)
+                              </span>
+                            </span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <button
                 type="submit"
