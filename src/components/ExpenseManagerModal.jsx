@@ -22,17 +22,22 @@ export default function ExpenseManagerModal({ trip, onClose, onExpensesUpdated }
   });
 
   const fetchExpenseData = async () => {
-    if (!trip) return;
+    if (!trip?.id) return;
     setLoading(true);
     try {
-      const [expRes, analyticsRes] = await Promise.all([
-        getTripExpenses(trip.id),
-        getTripExpenseAnalytics(trip.id),
-      ]);
-      setExpenses(expRes.data || []);
-      setAnalytics(analyticsRes.data);
-    } catch (err) {
-      console.error('Failed to load expenses:', err);
+      try {
+        const expRes = await getTripExpenses(trip.id);
+        setExpenses(expRes.data || []);
+      } catch (e) {
+        console.warn('Could not load expense items:', e);
+      }
+
+      try {
+        const analyticsRes = await getTripExpenseAnalytics(trip.id);
+        setAnalytics(analyticsRes.data);
+      } catch (e) {
+        console.warn('Could not load expense analytics:', e);
+      }
     } finally {
       setLoading(false);
     }
@@ -74,8 +79,12 @@ export default function ExpenseManagerModal({ trip, onClose, onExpensesUpdated }
     }
   };
 
-  const isOverBudget = analytics ? analytics.isOverBudget : false;
-  const utilization = analytics ? analytics.utilizationPercentage : 0;
+  const plannedBudget = Number(analytics?.plannedBudget ?? analytics?.totalBudget ?? trip?.budget ?? 0);
+  const actualTotalSpent = Number(analytics?.actualTotalSpent ?? trip?.actualTotalSpent ?? 0);
+  const remainingBudget = Number(analytics?.remainingBudget ?? (plannedBudget - actualTotalSpent));
+  const utilization = Number(analytics?.utilizationPercentage ?? analytics?.budgetUtilizationPercentage ?? (plannedBudget > 0 ? (actualTotalSpent / plannedBudget) * 100 : 0));
+  const isOverBudget = Boolean(analytics?.isOverBudget ?? (actualTotalSpent > plannedBudget));
+  const categoryBreakdown = analytics?.categoryBreakdown || analytics?.categoryTotals || {};
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -87,7 +96,7 @@ export default function ExpenseManagerModal({ trip, onClose, onExpensesUpdated }
             <div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Trip Expense Management</h3>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                {trip.startingLocation} → {trip.destinationCity} • Budget: ₹{trip.budget}
+                {(trip.startingLocation || trip.startLocationName || 'Start')} → {trip.destinationCity} • Budget: ₹{plannedBudget}
               </span>
             </div>
           </div>
@@ -97,58 +106,56 @@ export default function ExpenseManagerModal({ trip, onClose, onExpensesUpdated }
         </div>
 
         {/* Analytics Summary */}
-        {analytics && (
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>PLANNED BUDGET</span>
-                <strong style={{ fontSize: '1.1rem' }}>₹{analytics.plannedBudget}</strong>
-              </div>
-              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>TOTAL SPENT</span>
-                <strong style={{ fontSize: '1.1rem', color: isOverBudget ? 'var(--danger)' : 'var(--primary)' }}>
-                  ₹{analytics.actualTotalSpent}
-                </strong>
-              </div>
-              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>REMAINING</span>
-                <strong style={{ fontSize: '1.1rem', color: analytics.remainingBudget < 0 ? 'var(--danger)' : 'var(--success)' }}>
-                  ₹{analytics.remainingBudget}
-                </strong>
-              </div>
-              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>UTILIZED</span>
-                <strong style={{ fontSize: '1.1rem', color: isOverBudget ? 'var(--danger)' : '#1e293b' }}>
-                  {utilization.toFixed(1)}%
-                </strong>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>PLANNED BUDGET</span>
+              <strong style={{ fontSize: '1.1rem' }}>₹{plannedBudget}</strong>
+            </div>
+            <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>TOTAL SPENT</span>
+              <strong style={{ fontSize: '1.1rem', color: isOverBudget ? 'var(--danger)' : 'var(--primary)' }}>
+                ₹{actualTotalSpent}
+              </strong>
+            </div>
+            <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>REMAINING</span>
+              <strong style={{ fontSize: '1.1rem', color: remainingBudget < 0 ? 'var(--danger)' : 'var(--success)' }}>
+                ₹{remainingBudget}
+              </strong>
+            </div>
+            <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>UTILIZED</span>
+              <strong style={{ fontSize: '1.1rem', color: isOverBudget ? 'var(--danger)' : '#1e293b' }}>
+                {Number(utilization || 0).toFixed(1)}%
+              </strong>
+            </div>
+          </div>
+
+          {/* Over Budget Alert */}
+          {isOverBudget && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '0.65rem 0.85rem', borderRadius: '6px', color: 'var(--danger)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <AlertCircle size={16} />
+              <span>Trip spending has exceeded your planned budget by ₹{Math.abs(remainingBudget).toFixed(0)}.</span>
+            </div>
+          )}
+
+          {/* Category Breakdown Badges */}
+          {Object.keys(categoryBreakdown).length > 0 && (
+            <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '0.4rem' }}>
+                SPENDING BY CATEGORY:
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {Object.entries(categoryBreakdown).map(([cat, amt]) => (
+                  <span key={cat} className="badge badge-info" style={{ fontSize: '0.72rem', background: '#e0f2fe', color: '#0369a1' }}>
+                    {cat}: <strong>₹{amt}</strong>
+                  </span>
+                ))}
               </div>
             </div>
-
-            {/* Over Budget Alert */}
-            {isOverBudget && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '0.65rem 0.85rem', borderRadius: '6px', color: 'var(--danger)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <AlertCircle size={16} />
-                <span>Trip spending has exceeded your planned budget by ₹{Math.abs(analytics.remainingBudget).toFixed(0)}.</span>
-              </div>
-            )}
-
-            {/* Category Breakdown Badges */}
-            {analytics.categoryBreakdown && Object.keys(analytics.categoryBreakdown).length > 0 && (
-              <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '0.4rem' }}>
-                  SPENDING BY CATEGORY:
-                </span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {Object.entries(analytics.categoryBreakdown).map(([cat, amt]) => (
-                    <span key={cat} className="badge badge-info" style={{ fontSize: '0.72rem', background: '#e0f2fe', color: '#0369a1' }}>
-                      {cat}: <strong>₹{amt}</strong>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Log Expense Form */}
         <form onSubmit={handleSubmit} style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '1.5rem' }}>
