@@ -8,7 +8,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000,
+  timeout: 60000, // 60s timeout to allow Render free tier containers to wake from sleep
 });
 
 // Request interceptor to attach JWT token if present in localStorage
@@ -32,6 +32,18 @@ apiClient.interceptors.response.use(
       error.response?.data?.error ||
       error.message ||
       'An unexpected network error occurred';
+
+    // Gracefully translate cold start and network timeout errors
+    if (
+      error.code === 'ECONNABORTED' ||
+      error.message?.includes('timeout') ||
+      error.response?.status === 504 ||
+      error.response?.status === 503
+    ) {
+      errorMsg = 'Cloud server was sleeping and is spinning up (Render free-tier cold start). Please click again in a few moments!';
+    } else if (error.message === 'Network Error' || !error.response) {
+      errorMsg = 'Cannot reach backend server. The cloud service may be starting up, or check your connection.';
+    }
 
     if (error.response?.data?.data && typeof error.response.data.data === 'object') {
       const fieldDetails = Object.entries(error.response.data.data)

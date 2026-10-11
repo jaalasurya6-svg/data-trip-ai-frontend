@@ -3,7 +3,8 @@ import {
   loginUser,
   registerUser,
   getCurrentUserProfile,
-  logoutUser
+  logoutUser,
+  checkHealth
 } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -16,8 +17,11 @@ export const AuthProvider = ({ children }) => {
   const [authTab, setAuthTab] = useState('login'); // 'login' or 'register'
   const [authError, setAuthError] = useState(null);
 
-  // Initialize and restore session on mount
+  // Initialize and restore session on mount + pre-warm backend
   useEffect(() => {
+    // Non-blocking background warm-up for Render free-tier cold starts
+    checkHealth().catch(() => {});
+
     const initAuth = async () => {
       const savedToken = localStorage.getItem('daytrip_auth_token');
       if (savedToken) {

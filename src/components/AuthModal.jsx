@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Key, X, AlertCircle } from 'lucide-react';
+import { Key, X, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AuthModal() {
@@ -155,8 +155,14 @@ export default function AuthModal() {
               className="btn btn-primary"
               style={{ width: '100%', padding: '0.65rem', marginTop: '0.5rem', justifyContent: 'center' }}
             >
-              {submitting ? 'Authenticating...' : 'Sign In with JWT'}
+              {submitting ? 'Connecting...' : 'Sign In with JWT'}
             </button>
+            {submitting && (
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '0.5rem 0.75rem', borderRadius: '6px', color: '#0369a1', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <RefreshCw className="spin" size={14} />
+                <span>Connecting to cloud server... (Render free-tier may take 20–40s if waking up)</span>
+              </div>
+            )}
           </form>
         ) : (
           <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -220,8 +226,14 @@ export default function AuthModal() {
               className="btn btn-primary"
               style={{ width: '100%', padding: '0.65rem', marginTop: '0.5rem', justifyContent: 'center' }}
             >
-              {submitting ? 'Registering...' : 'Create Account & Sign In'}
+              {submitting ? 'Creating Account...' : 'Create Account & Sign In'}
             </button>
+            {submitting && (
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '0.5rem 0.75rem', borderRadius: '6px', color: '#0369a1', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <RefreshCw className="spin" size={14} />
+                <span>Connecting to cloud server... (Render free-tier may take 20–40s if waking up)</span>
+              </div>
+            )}
           </form>
         )}
       </div>
